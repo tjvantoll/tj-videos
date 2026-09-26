@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Halloween Horse Stables</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;color:#fff;font-family:system-ui,sans-serif}
+    video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+    #start{position:fixed;inset:0;display:grid;place-content:center;background:#0003}
+    button{border:1px solid #ffffff70;border-radius:99px;background:#15120ee8;color:#fff;padding:16px 24px;font:inherit;cursor:pointer;backdrop-filter:blur(10px)}
+    button:focus-visible{outline:3px solid #ffd69a;outline-offset:5px}
+    #hint{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-size:13px;text-shadow:0 1px 4px #000;pointer-events:none;transition:opacity .4s}
+    [hidden]{display:none!important}.quiet{opacity:0}
+    #error{position:fixed;inset:0;margin:auto;max-width:32rem;height:fit-content;padding:24px;background:#15120e;border-radius:16px}
+  </style>
+</head>
+<body>
+  <video id="video" src="/video.mp4" poster="/poster.png" autoplay muted loop playsinline preload="auto" aria-label="Halloween horse stables with quiet harp music"></video>
+  <div id="start"><button id="enter">Play with sound · Fullscreen</button></div>
+  <div id="hint" hidden>Space: pause · M: mute · F: fullscreen · Esc: exit fullscreen</div>
+  <p id="error" role="alert" hidden>The video could not load. Ensure public/video.mp4 exists, then reload this page.</p>
+  <script type="module">
+    const video=document.querySelector('#video'), start=document.querySelector('#start'), hint=document.querySelector('#hint');
+    let timer;
+    function showHint(){hint.hidden=false;hint.classList.remove('quiet');clearTimeout(timer);timer=setTimeout(()=>hint.classList.add('quiet'),3000)}
+    async function fullscreen(){try{if(!document.fullscreenElement) await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch{showHint()}}
+    document.querySelector('#enter').addEventListener('click',()=>{video.muted=false;video.volume=.75;video.play().catch(()=>{start.hidden=false});start.hidden=true;fullscreen();showHint()});
+    video.addEventListener('click',()=>{if(start.hidden){fullscreen();showHint()}});
+    video.addEventListener('error',()=>{document.querySelector('#error').hidden=false;start.hidden=true});
+    document.addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON')return;if(e.code==='Space'){e.preventDefault();video.paused?video.play().catch(()=>{}):video.pause()}else if(e.key.toLowerCase()==='m')video.muted=!video.muted;else if(e.key.toLowerCase()==='f')fullscreen();showHint()});
+    document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)showHint()});
+    document.addEventListener('pointermove',()=>{if(start.hidden)showHint()});
+  </script>
+</body>
+</html>
