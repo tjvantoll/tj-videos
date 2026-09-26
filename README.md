@@ -6,7 +6,7 @@ A single-purpose fullscreen player for Halloween Horse Stables. No framework, in
 npm start
 ```
 
-Open http://localhost:4173. The video fills the window and autoplays muted. Click **Play with sound · Fullscreen** once to enable audio and request browser fullscreen. Browsers require this interaction. The entire one-hour video repeats automatically. Space pauses, M mutes, F toggles fullscreen, and Escape exits fullscreen. The 16:9 picture is contained without cropping on other screen shapes.
+Open http://localhost:4173. The video fills the window and autoplays muted. Click **Play with sound · Fullscreen** once to enable audio and request browser fullscreen. Browsers require this interaction. The compact six-minute visual cycle repeats automatically; the harp repeats separately. The one-hour export remains available locally. Space pauses, M mutes, F toggles fullscreen, and Escape exits fullscreen. The 16:9 picture is contained without cropping on other screen shapes.
 
 ## Video
 
@@ -19,10 +19,18 @@ The large video and source assets are present locally but ignored by Git. Copy t
 “Evening Fall (Harp)” by Kevin MacLeod (incompetech.com).
 Source: https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1100236
 Licensed under Creative Commons Attribution 4.0: https://creativecommons.org/licenses/by/4.0/
-Changes: loudness adjusted, looped with crossfades, and mixed with generated horse ambience.
+Changes: loudness adjusted, gently time-stretched without pitch change, looped with crossfades, and mixed with generated horse ambience.
 
 Include the credit above in the YouTube description and wherever the video is redistributed. No claim is made that the music is original to this project. See CREDITS.md.
 
 ## Rebuild the film
 
 With FFmpeg/FFprobe and Python 3 installed, run `python3 scripts/build-video.py`. Source media lives in `assets/`. This takes several minutes and replaces `public/video.mp4`.
+
+## Netlify
+
+The website is static and requires no Node server in production. Netlify runs `npm run build` and publishes `dist/`, as configured in `netlify.toml`. `npm start` remains the local server.
+
+Commit `public/scene-loop.mp4` and `public/harp-loop.m4a` with the app. These compact media files preserve the still/motion schedule and continuous harp music. The original `public/video.mp4` is the 1.2 GB one-hour export and remains ignored; it is not needed by the website. The build deliberately excludes it.
+
+For a manual deployment, run `npm run build` locally and upload **dist/**. For Git deployments, push the config, code, and compact media together. The build fails clearly if either media asset is missing.

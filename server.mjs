@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('./public/',import.meta.url));
 const port=Number(process.env.PORT||4173);
-const types={'.html':'text/html; charset=utf-8','.mp4':'video/mp4','.png':'image/png','.mp3':'audio/mpeg'};
+const types={'.html':'text/html; charset=utf-8','.mp4':'video/mp4','.png':'image/png','.mp3':'audio/mpeg','.m4a':'audio/mp4'};
 const server=http.createServer(async(req,res)=>{
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,{'Allow':'GET, HEAD'}).end();return}
   try{

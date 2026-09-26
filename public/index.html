@@ -16,19 +16,23 @@
   </style>
 </head>
 <body>
-  <video id="video" src="/video.mp4" poster="/poster.png" autoplay muted loop playsinline preload="auto" aria-label="Halloween horse stables with quiet harp music"></video>
+  <video id="video" src="/scene-loop.mp4" poster="/poster.png" autoplay muted loop playsinline preload="auto" aria-label="Halloween horse stables with quiet harp music"></video>
+  <audio id="music" src="/harp-loop.m4a" loop preload="auto"></audio>
   <div id="start"><button id="enter">Play with sound · Fullscreen</button></div>
   <div id="hint" hidden>Space: pause · M: mute · F: fullscreen · Esc: exit fullscreen</div>
-  <p id="error" role="alert" hidden>The video could not load. Ensure public/video.mp4 exists, then reload this page.</p>
+  <p id="error" role="alert" hidden>The video could not load. Please reload the page or try again shortly.</p>
   <script type="module">
+    const music=document.querySelector('#music');
     const video=document.querySelector('#video'), start=document.querySelector('#start'), hint=document.querySelector('#hint');
     let timer;
     function showHint(){hint.hidden=false;hint.classList.remove('quiet');clearTimeout(timer);timer=setTimeout(()=>hint.classList.add('quiet'),3000)}
     async function fullscreen(){try{if(!document.fullscreenElement) await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch{showHint()}}
-    document.querySelector('#enter').addEventListener('click',()=>{video.muted=false;video.volume=.75;video.play().catch(()=>{start.hidden=false});start.hidden=true;fullscreen();showHint()});
+    async function playBoth(){try{await Promise.all([video.play(),music.play()]);start.hidden=true}catch{video.pause();music.pause();start.hidden=false}}
+    document.querySelector('#enter').addEventListener('click',()=>{video.muted=false;music.muted=false;video.volume=.75;music.volume=.75;playBoth();fullscreen();showHint()});
     video.addEventListener('click',()=>{if(start.hidden){fullscreen();showHint()}});
+    music.addEventListener('error',()=>{document.querySelector('#error').textContent='The background music could not load. Please reload the page.';document.querySelector('#error').hidden=false});
     video.addEventListener('error',()=>{document.querySelector('#error').hidden=false;start.hidden=true});
-    document.addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON')return;if(e.code==='Space'){e.preventDefault();video.paused?video.play().catch(()=>{}):video.pause()}else if(e.key.toLowerCase()==='m')video.muted=!video.muted;else if(e.key.toLowerCase()==='f')fullscreen();showHint()});
+    document.addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON')return;if(e.code==='Space'){e.preventDefault();video.paused?playBoth():(video.pause(),music.pause())}else if(e.key.toLowerCase()==='m'){video.muted=!video.muted;music.muted=video.muted;}else if(e.key.toLowerCase()==='f')fullscreen();showHint()});
     document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)showHint()});
     document.addEventListener('pointermove',()=>{if(start.hidden)showHint()});
   </script>
