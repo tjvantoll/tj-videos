@@ -12,9 +12,11 @@ Open http://localhost:4173. The video fills the window and autoplays muted. Clic
 
 `public/scene-loop.mp4` is a six-minute H.264/AAC scene at 1280×720, 24 fps. Lanterns and pumpkins flicker continuously, visible clouds drift steadily, and two photorealistic black cats blink occasionally. Both horses also blink independently at irregular intervals, starting at 3 and 5.5 seconds. Each blink lasts 0.58 seconds and is skipped during head-motion footage. Horse motion appears at 8–13, 85–90, 205–210 and 355–360 seconds. Only the horse regions change during those events; environmental animation continues throughout.
 
+The nearest cat scratches behind its ear at 18–23, 142–147 and 278–283 seconds, returning to its seated pose. A feathered local mask contains the generated clip; its blink overlay pauses during grooming.
+
 The web video contains horse sound only during those events. `public/harp-loop.m4a` supplies the continuous harp. The one-hour export repeats the visual cycle ten times with the harp mixed in. The camera remains fixed. The cats sit/recline, and the horses make small head movements rather than entering or leaving the scene.
 
-Generated source images, the horse clip, and music source are included in `assets/`. Rendering is entirely local and makes no paid API calls. The original export and working renders stay ignored by Git.
+Generated source images, the horse and cat clips, and music source are included in `assets/`. Rendering is entirely local and makes no paid API calls. The original export and working renders stay ignored by Git.
 
 ## Music credit
 
@@ -33,7 +35,7 @@ Install FFmpeg/FFprobe and Python 3.11+ with `pip install -r requirements-render
 python scripts/build-ambient-video.py
 ```
 
-This builds `work/ambient-v4/scene-loop.mp4`, `harp-loop.m4a`, `poster.png`, a 60-second preview, a full-hour export and media verification JSON. Copy the first three files into `public/` before `npm run build`. The preview starts at the beginning of the scene and includes a horse event at 8 seconds.
+This builds `work/ambient-v5/scene-loop.mp4`, `harp-loop.m4a`, `poster.png`, a 60-second preview, a full-hour export and media verification JSON. Copy the first three files into `public/` before `npm run build`. The preview starts at the beginning of the scene and includes a horse event at 8 seconds.
 
 For visual iteration only:
 

@@ -12,6 +12,8 @@ FPS = 24
 W, H = 1280, 720
 PERIOD = 360
 HORSE_EVENTS = (8, 85, 205, 355)
+CAT_EVENTS = (18, 142, 278)
+CAT_BOX = (355, 438, 148, 122)
 
 def read_image(p):
     return np.asarray(Image.open(p).convert('RGB').resize((W,H), Image.Resampling.LANCZOS), dtype=np.float32)
@@ -93,6 +95,10 @@ class Scene:
         self.horses=np.frombuffer(raw,dtype=np.uint8).reshape(-1,240,495,3)
         self.blinks=[((438,458,29,26),(12,39,74,111,159,202,249,301,342)),
                      ((747,357,17,19),(23,64,127,181,234,279,326))]
+        x,y,w,h=CAT_BOX
+        raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(assets/'cat-motion-sample.mp4'),'-t','5','-vf',f'scale={W}:{H},fps={FPS},crop={w}:{h}:{x}:{y}','-pix_fmt','rgb24','-f','rawvideo','-'])
+        self.cat_frames=np.frombuffer(raw,dtype=np.uint8).reshape(-1,h,w,3)
+        self.cat_mask=patch_mask(CAT_BOX,10)
 
     def frame(self, t):
         t=t%PERIOD
@@ -110,7 +116,19 @@ class Scene:
         alpha=(texture*self.sky_alpha*.85)[...,None]
         area=f[:240,760:]
         area[:]=area*(1-alpha)+np.array([147,165,192],np.float32)*alpha
-        for rect,events in self.blinks:
+        cat_active=False
+        for start in CAT_EVENTS:
+            d=t-start
+            if 0<=d<5:
+                cat_active=True
+                x,y,w,h=CAT_BOX
+                a=float(smooth(0,.25,d)*(1-smooth(4.25,5,d)))
+                mask=self.cat_mask*a
+                frame=self.cat_frames[min(int(d*FPS),len(self.cat_frames)-1)]
+                f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-mask)+frame*mask
+        for cat_index,(rect,events) in enumerate(self.blinks):
+            if cat_active and cat_index==0:
+                continue
             x,y,w,h=rect
             for event in events:
                 d=t-event
