@@ -10,9 +10,11 @@ Open http://localhost:4173. The video fills the window and autoplays muted. Clic
 
 ## Video
 
-`public/video.mp4` is a one-hour H.264/AAC film at the generated clip's native 1280×720, 24 fps. The stable is still most of the time. Five-second horse movements begin at 85, 205, and 355 seconds in each repeating six-minute cycle. Brief dissolves bridge the still and generated frames. Horse ambience plays only with those segments. Harp music plays continuously with crossfaded repeats. There are no more generation charges to run this app.
+`public/scene-loop.mp4` is a six-minute H.264/AAC scene at 1280×720, 24 fps. Lanterns and pumpkins flicker continuously, clouds drift slowly, and two photorealistic black cats blink occasionally. Horse motion appears at 85–90, 205–210 and 355–360 seconds. Only the horse regions change during those events; environmental animation continues throughout.
 
-The large video and source assets are present locally but ignored by Git. Copy them with the app when moving it to another machine.
+The web video contains horse sound only during those events. `public/harp-loop.m4a` supplies the continuous harp. The one-hour export repeats the visual cycle ten times with the harp mixed in. The camera remains fixed. The cats sit/recline, and the horses make small head movements rather than entering or leaving the scene.
+
+Generated source images, the horse clip, and music source are included in `assets/`. Rendering is entirely local and makes no paid API calls. The original export and working renders stay ignored by Git.
 
 ## Music credit
 
@@ -25,7 +27,23 @@ Include the credit above in the YouTube description and wherever the video is re
 
 ## Rebuild the film
 
-With FFmpeg/FFprobe and Python 3 installed, run `python3 scripts/build-video.py`. Source media lives in `assets/`. This takes several minutes and replaces `public/video.mp4`.
+Install FFmpeg/FFprobe and Python 3.11+ with `pip install -r requirements-render.txt`, then run:
+
+```sh
+python scripts/build-ambient-video.py
+```
+
+This builds `work/ambient-v2/scene-loop.mp4`, `harp-loop.m4a`, `poster.png`, a 60-second preview, a full-hour export and media verification JSON. Copy the first three files into `public/` before `npm run build`. The preview includes a horse event at 25 seconds.
+
+For visual iteration only:
+
+```sh
+python scripts/render-ambient.py --assets assets/ambient-v2 --output work/preview.mp4 --start 60 --duration 60
+```
+
+The renderer uses deterministic periodic light/cloud motion so six-minute boundaries match. Generated cat/sky plates are blended through masks; closed-eye patches create short independent blinks. All editable regions and timings live in `scripts/render-ambient.py`. Prompts are saved in `assets/ambient-v2/IMAGE-PROMPTS.md`.
+
+The older `scripts/build-video.py` remains for the original still-frame version.
 
 ## Netlify
 

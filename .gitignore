@@ -1,7 +1,9 @@
 node_modules/
 .DS_Store
 public/video.mp4
-assets/
+assets/*
+!assets/ambient-v2/
+!assets/evening-fall-harp.mp3
 work/
 
 dist/
