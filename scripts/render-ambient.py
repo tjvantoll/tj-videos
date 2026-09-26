@@ -34,6 +34,12 @@ class Scene:
         self.base=read_image(assets/'still.png')
         self.cats=read_image(assets/'scene-cats-corrected.png')
         self.alt=read_image(assets/'scene-clear-blink.png')
+        self.horse_closed=read_image(assets/'horse-eyes-closed.png')
+        # Independent eyelid motion, composited only when the heads are still.
+        self.horse_blinks=[
+            ((254,193,35,33),(3,22,43,65,103,126,149,172,194,227,251,272,296,321,344)),
+            ((521,232,31,30),(5.5,30,53,76,97,119,143,166,189,218,242,265,289,313,337)),
+        ]
         # Only the cat regions are replaced; source horse positions stay exact.
         for rect in [(398,445,86,106),(721,350,57,58)]:
             x,y,w,h=rect; m=patch_mask(rect,10)
@@ -113,6 +119,16 @@ class Scene:
                     m=patch_mask(rect,5)*a
                     f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-m)+self.alt[y:y+h,x:x+w]*m
                     break
+        if not any(start<=t<start+5 for start in HORSE_EVENTS):
+            for rect,events in self.horse_blinks:
+                x,y,w,h=rect
+                for event in events:
+                    d=t-event
+                    if 0<=d<.58:
+                        a=float(smooth(0,.16,d)*(1-smooth(.30,.58,d)))
+                        mask=patch_mask(rect,5)*a
+                        f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-mask)+self.horse_closed[y:y+h,x:x+w]*mask
+                        break
         for x0,y0,x1,y1,field,amp,i in self.lights:
             # Integer cycle frequencies + independent phases guarantee a wrap.
             phase=i*2.399963

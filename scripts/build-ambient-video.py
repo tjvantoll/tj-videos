@@ -8,7 +8,7 @@ import argparse, json, subprocess, sys, wave, runpy
 
 ROOT=Path(__file__).resolve().parent.parent
 p=argparse.ArgumentParser()
-p.add_argument('--output-directory',type=Path,default=ROOT/'work/ambient-v3')
+p.add_argument('--output-directory',type=Path,default=ROOT/'work/ambient-v4')
 p.add_argument('--reuse-render',action='store_true',help='Reuse an existing cycle-silent.mp4 in the output directory')
 a=p.parse_args()
 out=a.output_directory.resolve(); out.mkdir(parents=True,exist_ok=True)
