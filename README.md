@@ -10,7 +10,7 @@ Open http://localhost:4173. The video fills the window and autoplays muted. Clic
 
 ## Video
 
-`public/scene-loop.mp4` is a six-minute H.264/AAC scene at 1280×720, 24 fps. Lanterns and pumpkins flicker continuously, clouds drift slowly, and two photorealistic black cats blink occasionally. Horse motion appears at 85–90, 205–210 and 355–360 seconds. Only the horse regions change during those events; environmental animation continues throughout.
+`public/scene-loop.mp4` is a six-minute H.264/AAC scene at 1280×720, 24 fps. Lanterns and pumpkins flicker continuously, visible clouds drift steadily, and two photorealistic black cats blink occasionally. Horse motion appears at 8–13, 85–90, 205–210 and 355–360 seconds. Only the horse regions change during those events; environmental animation continues throughout.
 
 The web video contains horse sound only during those events. `public/harp-loop.m4a` supplies the continuous harp. The one-hour export repeats the visual cycle ten times with the harp mixed in. The camera remains fixed. The cats sit/recline, and the horses make small head movements rather than entering or leaving the scene.
 
@@ -33,7 +33,7 @@ Install FFmpeg/FFprobe and Python 3.11+ with `pip install -r requirements-render
 python scripts/build-ambient-video.py
 ```
 
-This builds `work/ambient-v2/scene-loop.mp4`, `harp-loop.m4a`, `poster.png`, a 60-second preview, a full-hour export and media verification JSON. Copy the first three files into `public/` before `npm run build`. The preview includes a horse event at 25 seconds.
+This builds `work/ambient-v3/scene-loop.mp4`, `harp-loop.m4a`, `poster.png`, a 60-second preview, a full-hour export and media verification JSON. Copy the first three files into `public/` before `npm run build`. The preview starts at the beginning of the scene and includes a horse event at 8 seconds.
 
 For visual iteration only:
 

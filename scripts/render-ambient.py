@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFilter
 FPS = 24
 W, H = 1280, 720
 PERIOD = 360
-HORSE_EVENTS = (85, 205, 355)
+HORSE_EVENTS = (8, 85, 205, 355)
 
 def read_image(p):
     return np.asarray(Image.open(p).convert('RGB').resize((W,H), Image.Resampling.LANCZOS), dtype=np.float32)
@@ -60,7 +60,7 @@ class Scene:
             n=np.fft.ifft2(spec*np.exp(-2*np.pi**2*((fx*sx)**2+(fy*sy)**2))).real
             cloud+=amp*n/(n.std()+1e-6)
         cloud=(cloud-cloud.min())/(cloud.max()-cloud.min())
-        self.cloud=np.maximum(cloud-.48,0).astype(np.float32)*1.45
+        self.cloud=np.clip((cloud-.38)*2.8,0,.85).astype(np.float32)
         self.cloud_x=np.arange(520,dtype=np.float32)
         self.cloud_y=np.arange(240)
         self.lights=[]
@@ -98,12 +98,12 @@ class Scene:
                 mask=self.horse_mask*a
                 f[105:345,100:595]=f[105:345,100:595]*(1-mask)+self.horses[min(int(elapsed*FPS),len(self.horses)-1)]*mask
         # Cloud motion remains continuous during every horse/cat event.
-        shift=t/PERIOD*512
+        shift=t/PERIOD*512*3
         pos=(self.cloud_x+shift)%512; left=pos.astype(int); frac=(pos-left)[None,:]
         texture=self.cloud[:240,left]*(1-frac)+self.cloud[:240,(left+1)%512]*frac
-        alpha=(texture*self.sky_alpha*.68)[...,None]
+        alpha=(texture*self.sky_alpha*.85)[...,None]
         area=f[:240,760:]
-        area[:]=area*(1-alpha)+np.array([110,129,157],np.float32)*alpha
+        area[:]=area*(1-alpha)+np.array([147,165,192],np.float32)*alpha
         for rect,events in self.blinks:
             x,y,w,h=rect
             for event in events:
@@ -119,7 +119,9 @@ class Scene:
             v=(.52*math.sin(2*math.pi*(71+i*3)*t/PERIOD+phase)
               +.29*math.sin(2*math.pi*(183+i*7)*t/PERIOD+phase*.73)
               +.19*math.sin(2*math.pi*(349+i*11)*t/PERIOD+phase*1.31))
-            f[y0:y1,x0:x1]*=1+field*(amp*v)
+            # The previous 7–10% peak variation was lost at normal viewing size.
+            # A small negative bias also reveals detail in the clipped highlights.
+            f[y0:y1,x0:x1]*=1+field[:,:,:1]*(amp*4.0*(v-.22))
         return np.clip(f,0,255).astype(np.uint8)
 
 def main():
