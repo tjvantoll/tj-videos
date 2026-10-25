@@ -10,10 +10,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 FPS = 24
 W, H = 1280, 720
-PERIOD = 360
-HORSE_EVENTS = (8, 85, 205, 355)
-CAT_EVENTS = (18, 142, 278)
-CAT_BOX = (355, 438, 148, 122)
+PERIOD = 120
 
 def read_image(p):
     return np.asarray(Image.open(p).convert('RGB').resize((W,H), Image.Resampling.LANCZOS), dtype=np.float32)
@@ -36,12 +33,6 @@ class Scene:
         self.base=read_image(assets/'still.png')
         self.cats=read_image(assets/'scene-cats-corrected.png')
         self.alt=read_image(assets/'scene-clear-blink.png')
-        self.horse_closed=read_image(assets/'horse-eyes-closed.png')
-        # Independent eyelid motion, composited only when the heads are still.
-        self.horse_blinks=[
-            ((254,193,35,33),(3,22,43,65,103,126,149,172,194,227,251,272,296,321,344)),
-            ((521,232,31,30),(5.5,30,53,76,97,119,143,166,189,218,242,265,289,313,337)),
-        ]
         # Only the cat regions are replaced; source horse positions stay exact.
         for rect in [(398,445,86,106),(721,350,57,58)]:
             x,y,w,h=rect; m=patch_mask(rect,10)
@@ -87,75 +78,46 @@ class Scene:
             # Brightness and warm spill rise together, restricted to each lamp.
             field=(core*.85+spill*.15)[...,None]*np.array([1,.74,.38],np.float32)
             self.lights.append((x0,y0,x1,y1,field.astype(np.float32),amp,i))
-        # Carefully bounded horse regions; excludes lanterns and both cats.
-        self.horse_mask=polygon([(105,185),(169,161),(261,112),(340,119),(373,276),(373,329),(258,339),(232,291),(105,288)],6)
-        self.horse_mask+=polygon([(442,230),(497,205),(562,183),(584,229),(585,330),(547,335),(526,302),(450,299)],5)
-        self.horse_mask=np.clip(self.horse_mask,0,1)[105:345,100:595,None]
-        raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(assets/'horse-motion-sample.mp4'),'-t','5','-vf','crop=495:240:100:105','-pix_fmt','rgb24','-f','rawvideo','-'])
-        self.horses=np.frombuffer(raw,dtype=np.uint8).reshape(-1,240,495,3)
-        self.blinks=[((438,458,29,26),(12,39,74,111,159,202,249,301,342)),
-                     ((747,357,17,19),(23,64,127,181,234,279,326))]
-        x,y,w,h=CAT_BOX
-        raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(assets/'cat-motion-sample.mp4'),'-t','5','-vf',f'scale={W}:{H},fps={FPS},crop={w}:{h}:{x}:{y}','-pix_fmt','rgb24','-f','rawvideo','-'])
-        self.cat_frames=np.frombuffer(raw,dtype=np.uint8).reshape(-1,h,w,3)
-        self.cat_mask=patch_mask(CAT_BOX,10)
+        # Animal footage is decoded at playback frame rate; never retimed.
+        self.regions=[]
+        clip=assets/'animals-natural.mp4'
+        for rect in [(95,100,505,250),(350,435,160,130),(704,336,98,90)]:
+            x,y,w,h=rect
+            raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(clip),
+                '-vf',f'scale={W}:{H},fps={FPS},crop={w}:{h}:{x}:{y}',
+                '-pix_fmt','rgb24','-f','rawvideo','-'])
+            frames=np.frombuffer(raw,dtype=np.uint8).reshape(-1,h,w,3)
+            mask=patch_mask(rect,12)
+            if x==95:
+                # Exclude the lantern between stalls and all background sky.
+                full=polygon([(100,185),(167,155),(258,105),(350,110),(389,260),(389,340),(250,350),(225,300),(100,298)],5)
+                full+=polygon([(440,225),(491,195),(569,175),(598,225),(600,340),(535,344),(518,306),(440,305)],5)
+                mask=np.clip(full,0,1)[y:y+h,x:x+w,None]
+            self.regions.append((rect,frames,mask))
 
     def frame(self, t):
         t=t%PERIOD
         f=self.base.copy()
-        for start in HORSE_EVENTS:
-            elapsed=t-start
-            if 0<=elapsed<5:
-                a=float(smooth(0,.3,elapsed)*(1-smooth(4.5,5,elapsed)))
-                mask=self.horse_mask*a
-                f[105:345,100:595]=f[105:345,100:595]*(1-mask)+self.horses[min(int(elapsed*FPS),len(self.horses)-1)]*mask
+        # Prepared animal source plays forward, at its original speed.
+        for rect,frames,mask in self.regions:
+            x,y,w,h=rect
+            frame=frames[round(t*FPS)%len(frames)]
+            f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-mask)+frame*mask
         # Cloud motion remains continuous during every horse/cat event.
-        shift=t/PERIOD*512*3
+        shift=t/PERIOD*512
         pos=(self.cloud_x+shift)%512; left=pos.astype(int); frac=(pos-left)[None,:]
         texture=self.cloud[:240,left]*(1-frac)+self.cloud[:240,(left+1)%512]*frac
         alpha=(texture*self.sky_alpha*.85)[...,None]
         area=f[:240,760:]
         area[:]=area*(1-alpha)+np.array([147,165,192],np.float32)*alpha
-        cat_active=False
-        for start in CAT_EVENTS:
-            d=t-start
-            if 0<=d<5:
-                cat_active=True
-                x,y,w,h=CAT_BOX
-                a=float(smooth(0,.25,d)*(1-smooth(4.25,5,d)))
-                mask=self.cat_mask*a
-                frame=self.cat_frames[min(int(d*FPS),len(self.cat_frames)-1)]
-                f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-mask)+frame*mask
-        for cat_index,(rect,events) in enumerate(self.blinks):
-            if cat_active and cat_index==0:
-                continue
-            x,y,w,h=rect
-            for event in events:
-                d=t-event
-                if 0<=d<.72:
-                    a=float(smooth(0,.20,d)*(1-smooth(.38,.72,d)))
-                    m=patch_mask(rect,5)*a
-                    f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-m)+self.alt[y:y+h,x:x+w]*m
-                    break
-        if not any(start<=t<start+5 for start in HORSE_EVENTS):
-            for rect,events in self.horse_blinks:
-                x,y,w,h=rect
-                for event in events:
-                    d=t-event
-                    if 0<=d<.58:
-                        a=float(smooth(0,.16,d)*(1-smooth(.30,.58,d)))
-                        mask=patch_mask(rect,5)*a
-                        f[y:y+h,x:x+w]=f[y:y+h,x:x+w]*(1-mask)+self.horse_closed[y:y+h,x:x+w]*mask
-                        break
         for x0,y0,x1,y1,field,amp,i in self.lights:
             # Integer cycle frequencies + independent phases guarantee a wrap.
             phase=i*2.399963
-            v=(.52*math.sin(2*math.pi*(71+i*3)*t/PERIOD+phase)
-              +.29*math.sin(2*math.pi*(183+i*7)*t/PERIOD+phase*.73)
-              +.19*math.sin(2*math.pi*(349+i*11)*t/PERIOD+phase*1.31))
-            # The previous 7–10% peak variation was lost at normal viewing size.
-            # A small negative bias also reveals detail in the clipped highlights.
-            f[y0:y1,x0:x1]*=1+field[:,:,:1]*(amp*4.0*(v-.22))
+            v=(.52*math.sin(2*math.pi*(24+i)*t/PERIOD+phase)
+              +.29*math.sin(2*math.pi*(61+i*2)*t/PERIOD+phase*.73)
+              +.19*math.sin(2*math.pi*(116+i*4)*t/PERIOD+phase*1.31))
+            # Restrained continuous variation, with detail in the highlights.
+            f[y0:y1,x0:x1]*=1+field[:,:,:1]*(amp*2.0*(v-.22))
         return np.clip(f,0,255).astype(np.uint8)
 
 def main():
@@ -163,17 +125,17 @@ def main():
     p.add_argument('--assets',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--duration',type=float,default=60)
-    p.add_argument('--start',type=float,default=60)
+    p.add_argument('--start',type=float,default=0)
     p.add_argument('--crf',type=int,default=21)
     p.add_argument('--frames-only',action='store_true')
     a=p.parse_args(); a.output.parent.mkdir(parents=True,exist_ok=True)
     scene=Scene(a.assets)
     if a.frames_only:
-        for t in [0,12.3,60,85,87,90,120,239,359.958333,360]:
+        for t in [0,1,5,15,30,60,90,PERIOD-1/FPS,PERIOD]:
             Image.fromarray(scene.frame(t)).save(a.output.parent/f'frame-{t:g}.png')
         # A numerical seam check compares normal adjacent frames and wrap.
         def diff(t,u): return float(np.abs(scene.frame(t).astype(float)-scene.frame(u)).mean())
-        stats={'cycle_seconds':PERIOD,'fps':FPS,'exact_repeat_mae':diff(0,360),'wrap_adjacent_mae':diff(360-1/FPS,0),'normal_adjacent_mae':diff(1,1+1/FPS)}
+        stats={'cycle_seconds':PERIOD,'fps':FPS,'exact_repeat_mae':diff(0,PERIOD),'wrap_adjacent_mae':diff(PERIOD-1/FPS,0),'normal_adjacent_mae':diff(1,1+1/FPS)}
         (a.output.parent/'loop-check.json').write_text(json.dumps(stats,indent=2)); print(stats)
         return
     cmd=['ffmpeg','-v','error','-y','-f','rawvideo','-pixel_format','rgb24','-video_size',f'{W}x{H}','-framerate',str(FPS),'-i','pipe:0','-an','-c:v','libx264','-preset','fast','-crf',str(a.crf),'-pix_fmt','yuv420p','-g','240','-threads','4','-movflags','+faststart',str(a.output)]
